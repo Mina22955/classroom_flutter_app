@@ -2,10 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/custom_button.dart';
+import '../widgets/student_card.dart';
+import '../widgets/class_card.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _classIdController = TextEditingController();
+  final List<Map<String, String>> _joinedClasses = [];
+
+  @override
+  void dispose() {
+    _classIdController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,229 +33,162 @@ class HomeScreen extends StatelessWidget {
           appBar: AppBar(
             backgroundColor: Colors.black,
             elevation: 0,
-            title: const Text('الرئيسية'),
             centerTitle: true,
             actions: [
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: () async {
-                  await authProvider.logout();
-                  if (context.mounted) {
-                    context.go('/login');
-                  }
-                },
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: 12),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () async {
+                    await authProvider.logout();
+                    if (context.mounted) {
+                      context.go('/login');
+                    }
+                  },
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.logout,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
           body: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 40),
-                  // Welcome Section
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0A84FF), Color(0xFF8E44AD)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+              padding: const EdgeInsets.all(16),
+              child: Directionality(
+                textDirection: TextDirection.rtl,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Student top card
+                    StudentCard(
+                      studentName: user?['name'] ?? 'الطالب',
+                      isSubscribed: true,
+                      renewalDate: '2025-12-31',
+                      onTap: () => context.push('/profile'),
+                    ),
+                    const SizedBox(height: 20),
+                    // Input and Join button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _classIdController,
+                            decoration: InputDecoration(
+                              hintText: 'ID الكلاس',
+                              filled: true,
+                              fillColor: const Color(0xFF1C1C1E),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.white.withOpacity(0.15),
+                                  width: 1,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF0A84FF),
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          height: 52,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF075EC2), Color(0xFF266FD1)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () {
+                                  final id = _classIdController.text.trim();
+                                  if (id.isEmpty) return;
+                                  setState(() {
+                                    _joinedClasses.add({
+                                      'id': id,
+                                      'name': 'كلاس رقم $id',
+                                    });
+                                  });
+                                  _classIdController.clear();
+                                },
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'دخول',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'الكلاسات المنضَمّة',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
-                      borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.school,
-                          size: 48,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'مرحباً ${user?['name'] ?? 'مستخدم'}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'أهلاً بك في منصة مانسا التعليمية',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: _joinedClasses.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final klass = _joinedClasses[index];
+                          return ClassCard(
+                            className: klass['name']!,
+                            onTap: () => context.push(
+                              '/classroom',
+                              extra: {
+                                'id': klass['id'],
+                                'name': klass['name'],
+                              },
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                  // User Info Card
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1C1C1E),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'معلومات الحساب',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildInfoRow('الاسم', user?['name'] ?? 'غير محدد'),
-                        _buildInfoRow(
-                            'البريد الإلكتروني', user?['email'] ?? 'غير محدد'),
-                        _buildInfoRow(
-                            'رقم الهاتف', user?['phone'] ?? 'غير محدد'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  // Features Section
-                  const Text(
-                    'المميزات المتاحة',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      children: [
-                        _buildFeatureCard(
-                          icon: Icons.book,
-                          title: 'المحتوى التعليمي',
-                          subtitle: 'دروس ومقالات',
-                        ),
-                        _buildFeatureCard(
-                          icon: Icons.quiz,
-                          title: 'الاختبارات',
-                          subtitle: 'اختبارات تفاعلية',
-                        ),
-                        _buildFeatureCard(
-                          icon: Icons.analytics,
-                          title: 'التقارير',
-                          subtitle: 'تتبع التقدم',
-                        ),
-                        _buildFeatureCard(
-                          icon: Icons.support,
-                          title: 'الدعم الفني',
-                          subtitle: 'مساعدة 24/7',
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Logout Button
-                  CustomButton(
-                    text: 'تسجيل الخروج',
-                    onPressed: () async {
-                      await authProvider.logout();
-                      if (context.mounted) {
-                        context.go('/login');
-                      }
-                    },
-                    backgroundColor: Colors.red,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                color: Color(0xFFB0B0B0),
-                fontSize: 14,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF0A84FF).withOpacity(0.2),
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            color: const Color(0xFF0A84FF),
-            size: 32,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: Color(0xFFB0B0B0),
-              fontSize: 12,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
     );
   }
 }

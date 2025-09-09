@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/subscription_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/loading_overlay.dart';
@@ -35,6 +36,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     final subscriptionProvider =
         Provider.of<SubscriptionProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     final success = await subscriptionProvider.processPayment(
       cardNumber: _cardNumberController.text.trim(),
@@ -44,6 +46,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
 
     if (success && mounted) {
+      // Authenticate the user after successful payment
+      // In a real app, this would be done by the backend after payment verification
+      // For now, we'll simulate authentication
+      await authProvider.login(
+        email: 'user@example.com', // This would come from the signup data
+        password: 'password', // This would be stored securely
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content:

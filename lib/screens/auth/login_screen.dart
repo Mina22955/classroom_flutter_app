@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Icon(
                         Icons.school,
                         size: 80,
-                        color: Color(0xFF0A84FF),
+                        color: Color.fromARGB(255, 10, 132, 255),
                       ),
                       const SizedBox(height: 24),
                       const Text(

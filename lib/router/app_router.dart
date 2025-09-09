@@ -10,6 +10,8 @@ import '../screens/auth/reset_password_screen.dart';
 import '../screens/subscription/plans_screen.dart';
 import '../screens/subscription/payment_screen.dart';
 import '../screens/home_screen.dart';
+import '../screens/profile_screen.dart';
+import '../screens/classroom_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -22,6 +24,9 @@ class AppRouter {
       final isForgetPasswordRoute = state.uri.path == '/forget-password';
       final isOtpRoute = state.uri.path == '/otp';
       final isResetPasswordRoute = state.uri.path == '/reset-password';
+      final isPlansRoute = state.uri.path == '/plans';
+      final isPaymentRoute = state.uri.path == '/payment';
+      // final isHomeRoute = state.uri.path == '/home';
 
       // If user is authenticated and trying to access auth screens, redirect to home
       if (isAuthenticated &&
@@ -33,13 +38,20 @@ class AppRouter {
         return '/home';
       }
 
-      // If user is not authenticated and trying to access protected routes, redirect to login
+      // If user is authenticated and tries to access plans or payment, redirect to home
+      if (isAuthenticated && (isPlansRoute || isPaymentRoute)) {
+        return '/home';
+      }
+
+      // If user is not authenticated and trying to access protected routes (except plans and payment), redirect to login
       if (!isAuthenticated &&
           !isLoginRoute &&
           !isSignupRoute &&
           !isForgetPasswordRoute &&
           !isOtpRoute &&
-          !isResetPasswordRoute) {
+          !isResetPasswordRoute &&
+          !isPlansRoute &&
+          !isPaymentRoute) {
         return '/login';
       }
 
@@ -92,6 +104,21 @@ class AppRouter {
         path: '/home',
         name: 'home',
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/classroom',
+        name: 'classroom',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final classId = extra?['id']?.toString() ?? '';
+          final className = extra?['name']?.toString() ?? 'الكلاس';
+          return ClassroomScreen(classId: classId, className: className);
+        },
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
