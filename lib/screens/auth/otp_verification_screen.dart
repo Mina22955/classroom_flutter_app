@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
+// Removed unused import
 import '../../widgets/loading_overlay.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
@@ -24,6 +24,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final List<TextEditingController> _otpControllers =
       List.generate(6, (index) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  bool _isResending = false;
 
   @override
   void dispose() {
@@ -90,11 +91,19 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Future<void> _resendOtp() async {
+    setState(() {
+      _isResending = true;
+    });
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     final success = await authProvider.requestPasswordReset(
       email: widget.email,
     );
+
+    setState(() {
+      _isResending = false;
+    });
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -270,17 +279,28 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                               fontSize: 16,
                             ),
                           ),
-                          TextButton(
-                            onPressed: _resendOtp,
-                            child: const Text(
-                              'إعادة الإرسال',
-                              style: TextStyle(
-                                color: Color(0xFF0A84FF),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                          if (_isResending)
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFF0A84FF)),
+                              ),
+                            )
+                          else
+                            TextButton(
+                              onPressed: _resendOtp,
+                              child: const Text(
+                                'إعادة الإرسال',
+                                style: TextStyle(
+                                  color: Color(0xFF0A84FF),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ],

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/student_card.dart';
 import '../widgets/class_card.dart';
+import '../widgets/custom_button.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,11 +16,34 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _classIdController = TextEditingController();
   final List<Map<String, String>> _joinedClasses = [];
+  bool _isJoiningClass = false;
 
   @override
   void dispose() {
     _classIdController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleJoinClass() async {
+    final id = _classIdController.text.trim();
+    if (id.isEmpty) return;
+
+    setState(() {
+      _isJoiningClass = true;
+    });
+
+    // Simulate API call delay
+    await Future.delayed(const Duration(seconds: 1));
+
+    setState(() {
+      _joinedClasses.add({
+        'id': id,
+        'name': 'كلاس رقم $id',
+      });
+      _isJoiningClass = false;
+    });
+
+    _classIdController.clear();
   }
 
   @override
@@ -48,14 +72,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     width: 36,
                     height: 36,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF075EC2), Color(0xFF266FD1)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Center(
                       child: Icon(
                         Icons.logout,
                         color: Colors.white,
+                        size: 20,
                       ),
                     ),
                   ),
@@ -109,46 +138,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 12),
                         SizedBox(
                           height: 52,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF075EC2), Color(0xFF266FD1)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
+                          child: CustomButton(
+                            text: 'دخول',
+                            onPressed: _handleJoinClass,
+                            isLoading: _isJoiningClass,
+                            backgroundGradient: const LinearGradient(
+                              colors: [Color(0xFF075EC2), Color(0xFF266FD1)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(12),
-                                onTap: () {
-                                  final id = _classIdController.text.trim();
-                                  if (id.isEmpty) return;
-                                  setState(() {
-                                    _joinedClasses.add({
-                                      'id': id,
-                                      'name': 'كلاس رقم $id',
-                                    });
-                                  });
-                                  _classIdController.clear();
-                                },
-                                child: const Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'دخول',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                            height: 52,
+                            width: 100,
                           ),
                         ),
                       ],

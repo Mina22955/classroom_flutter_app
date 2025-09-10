@@ -5,6 +5,7 @@ class ProfileInfoRow extends StatelessWidget {
   final String value;
   final Color? valueColor;
   final Widget? trailing;
+  final IconData? icon;
 
   const ProfileInfoRow({
     super.key,
@@ -12,6 +13,7 @@ class ProfileInfoRow extends StatelessWidget {
     required this.value,
     this.valueColor,
     this.trailing,
+    this.icon,
   });
 
   @override
@@ -19,9 +21,17 @@ class ProfileInfoRow extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                color: const Color(0xFF0A84FF),
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+            ],
             SizedBox(
               width: 110,
               child: Text(

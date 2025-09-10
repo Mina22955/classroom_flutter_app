@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/profile_info_row.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -6,78 +9,475 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Mock student data
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.user ?? {};
+
     final Map<String, dynamic> student = {
-      'name': 'محمد أحمد',
-      'phone': '+966500000000',
-      'email': 'student@example.com',
-      'active': true,
-      'renewal': '2025-12-31',
+      'name': (user['name'] ?? 'محمد أحمد').toString(),
+      'phone': (user['phone'] ?? '+966500000000').toString(),
+      'email': (user['email'] ?? 'student@example.com').toString(),
+      'active': (user['active'] ?? true) as bool,
+      'renewal': (user['renewal'] ?? '2025-12-31').toString(),
     };
 
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('الملف الشخصي'),
+        elevation: 0,
+        leading: IconButton(
+          icon: ShaderMask(
+            shaderCallback: (Rect bounds) {
+              return const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF4FC3F7), Color(0xFF0A84FF)],
+              ).createShader(bounds);
+            },
+            blendMode: BlendMode.srcIn,
+            child: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          ),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text(
+          'الملف الشخصي',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
       ),
       body: Directionality(
         textDirection: TextDirection.rtl,
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          children: [
-            Card(
-              color: const Color(0xFF1C1C1E),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Profile Header Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2A2A2E), Color(0xFF1F1F23)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ProfileInfoRow(
-                      label: 'الاسم',
-                      value: student['name'],
-                    ),
-                    const Divider(color: Colors.white10),
-                    ProfileInfoRow(
-                      label: 'رقم الهاتف',
-                      value: student['phone'],
-                    ),
-                    const Divider(color: Colors.white10),
-                    ProfileInfoRow(
-                      label: 'البريد الإلكتروني',
-                      value: student['email'],
-                    ),
-                    const Divider(color: Colors.white10),
-                    ProfileInfoRow(
-                      label: 'الحالة',
-                      value: student['active'] ? 'نشط' : 'غير نشط',
-                      valueColor:
-                          student['active'] ? Colors.greenAccent : Colors.red,
-                      trailing: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: student['active'] ? Colors.green : Colors.red,
-                          shape: BoxShape.circle,
+                    // Profile Avatar
+                    Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(45),
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A3342),
+                            borderRadius: BorderRadius.circular(40),
+                          ),
+                          child: ShaderMask(
+                            shaderCallback: (Rect bounds) {
+                              return const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFF4FC3F7), // light blue
+                                  Color(0xFF0A84FF), // brand blue
+                                ],
+                              ).createShader(bounds);
+                            },
+                            blendMode: BlendMode.srcIn,
+                            child: const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                    const Divider(color: Colors.white10),
+                    const SizedBox(height: 16),
+                    // Student Name
+                    Text(
+                      student['name'],
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Status Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: student['active']
+                            ? Colors.green.withOpacity(0.2)
+                            : Colors.red.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: student['active'] ? Colors.green : Colors.red,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color:
+                                  student['active'] ? Colors.green : Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            student['active'] ? 'نشط' : 'غير نشط',
+                            style: TextStyle(
+                              color:
+                                  student['active'] ? Colors.green : Colors.red,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Profile Information Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1C1C1E),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'معلومات الحساب',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ProfileInfoRow(
+                      label: 'الاسم الكامل',
+                      value: student['name'],
+                      icon: Icons.person_outline,
+                    ),
+                    const SizedBox(height: 16),
+                    ProfileInfoRow(
+                      label: 'رقم الهاتف',
+                      value: student['phone'],
+                      icon: Icons.phone_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    ProfileInfoRow(
+                      label: 'البريد الإلكتروني',
+                      value: student['email'],
+                      icon: Icons.email_outlined,
+                    ),
+                    const SizedBox(height: 16),
                     ProfileInfoRow(
                       label: 'تاريخ التجديد',
                       value: student['renewal'],
+                      icon: Icons.calendar_today_outlined,
                       valueColor: const Color(0xFFB0B0B0),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              // Subscription plan card
+              Builder(
+                builder: (context) {
+                  // Use SubscriptionProvider if available
+                  Map<String, dynamic>? selectedPlan;
+                  try {
+                    // ignore: use_build_context_synchronously
+                    selectedPlan = ModalRoute.of(context) != null ? null : null;
+                  } catch (_) {}
+
+                  // Fallback mock data for display
+                  final plan = selectedPlan ??
+                      {
+                        'name': 'الخطة الشهرية',
+                        'price': 29,
+                        'currency': 'ريال',
+                        'duration': 'شهر',
+                      };
+
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1C1C1E),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.1),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Icon at top-left
+                        const Align(
+                          alignment: Alignment.topLeft,
+                          child: Icon(
+                            Icons.workspace_premium,
+                            color: Color(0xFF0A84FF),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'الخطة الحالية',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          plan['name'].toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${plan['price']} ${plan['currency']} / ${plan['duration']}',
+                          style: const TextStyle(
+                            color: Color(0xFFB0B0B0),
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Transparent button with blue outline and gradient text at bottom-left
+                        Align(
+                          alignment: Alignment.bottomLeft,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () {
+                                // TODO: Navigate to upgrade flow
+                              },
+                              child: Container(
+                                height: 42,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: Color(0xFF0A84FF), width: 1.5),
+                                ),
+                                child: Center(
+                                  child: ShaderMask(
+                                    shaderCallback: (bounds) =>
+                                        const LinearGradient(
+                                      colors: [
+                                        Color(0xFF4FC3F7),
+                                        Color(0xFF0A84FF)
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ).createShader(bounds),
+                                    blendMode: BlendMode.srcIn,
+                                    child: const Text(
+                                      'ترقيه الخطه',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+              // Action Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0A84FF), Color(0xFF266FD1)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () async {
+                            // Simple edit dialog for demo
+                            final nameController =
+                                TextEditingController(text: student['name']);
+                            final phoneController =
+                                TextEditingController(text: student['phone']);
+                            await showDialog(
+                              context: context,
+                              builder: (ctx) {
+                                return AlertDialog(
+                                  backgroundColor: const Color(0xFF1C1C1E),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  title: const Text('تعديل الملف الشخصي',
+                                      style: TextStyle(color: Colors.white)),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      TextField(
+                                        controller: nameController,
+                                        decoration: const InputDecoration(
+                                          hintText: 'الاسم',
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      TextField(
+                                        controller: phoneController,
+                                        decoration: const InputDecoration(
+                                          hintText: 'رقم الهاتف',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx).pop(),
+                                      child: const Text('إلغاء'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () async {
+                                        final newName =
+                                            nameController.text.trim();
+                                        final newPhone =
+                                            phoneController.text.trim();
+                                        await Provider.of<AuthProvider>(context,
+                                                listen: false)
+                                            .updateProfile(
+                                                name: newName.isEmpty
+                                                    ? null
+                                                    : newName,
+                                                phone: newPhone.isEmpty
+                                                    ? null
+                                                    : newPhone);
+                                        // ignore: use_build_context_synchronously
+                                        Navigator.of(ctx).pop();
+                                        // ignore: use_build_context_synchronously
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content:
+                                                Text('تم حفظ التعديلات بنجاح'),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                      },
+                                      child: const Text('حفظ'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                          child: const Center(
+                            child: Text(
+                              'تعديل الملف الشخصي',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1C1C1E),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            // TODO: Implement settings
+                          },
+                          child: const Center(
+                            child: Text(
+                              'الإعدادات',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

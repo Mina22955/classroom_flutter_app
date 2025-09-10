@@ -168,6 +168,20 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // Update Profile (mock local update)
+  Future<void> updateProfile({
+    String? name,
+    String? phone,
+  }) async {
+    // In real app, call _apiService.updateProfile and await response
+    _user = {
+      ...?_user,
+      if (name != null) 'name': name,
+      if (phone != null) 'phone': phone,
+    };
+    notifyListeners();
+  }
+
   // Logout
   Future<void> logout() async {
     _setLoading(true);

@@ -14,6 +14,8 @@ class PlansScreen extends StatefulWidget {
 }
 
 class _PlansScreenState extends State<PlansScreen> {
+  bool _isNavigating = false;
+
   @override
   void initState() {
     super.initState();
@@ -22,7 +24,7 @@ class _PlansScreenState extends State<PlansScreen> {
     });
   }
 
-  void _handleNext() {
+  Future<void> _handleNext() async {
     final subscriptionProvider =
         Provider.of<SubscriptionProvider>(context, listen: false);
 
@@ -36,7 +38,16 @@ class _PlansScreenState extends State<PlansScreen> {
       return;
     }
 
-    context.go('/payment');
+    setState(() {
+      _isNavigating = true;
+    });
+
+    // Simulate navigation delay
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (mounted) {
+      context.go('/payment');
+    }
   }
 
   @override
@@ -192,6 +203,7 @@ class _PlansScreenState extends State<PlansScreen> {
                         CustomButton(
                           text: 'التالي',
                           onPressed: _handleNext,
+                          isLoading: _isNavigating,
                           backgroundColor:
                               subscriptionProvider.selectedPlan != null
                                   ? const Color(0xFF0A84FF)

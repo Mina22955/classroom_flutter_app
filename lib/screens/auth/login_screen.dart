@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
-import '../../widgets/loading_overlay.dart';
+// Removed global loading overlay in favor of inline button loader
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -51,128 +51,129 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        return LoadingOverlay(
-          isLoading: authProvider.isLoading,
-          loadingText: 'جاري تسجيل الدخول...',
-          child: Scaffold(
-            backgroundColor: Colors.black,
-            body: SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 60),
-                      // Logo/Title
-                      const Icon(
-                        Icons.school,
-                        size: 80,
-                        color: Color.fromARGB(255, 10, 132, 255),
+        return Scaffold(
+          backgroundColor: Colors.black,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 60),
+                    // Logo/Title
+                    const Icon(
+                      Icons.school,
+                      size: 80,
+                      color: Color.fromARGB(255, 10, 132, 255),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'مرحباً بك',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'مرحباً بك',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'سجل دخولك للوصول إلى حسابك',
+                      style: TextStyle(
+                        color: Color(0xFFB0B0B0),
+                        fontSize: 16,
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'سجل دخولك للوصول إلى حسابك',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 48),
+                    // Email Field
+                    CustomTextField(
+                      controller: _emailController,
+                      hintText: 'البريد الإلكتروني',
+                      keyboardType: TextInputType.emailAddress,
+                      prefixIcon: const Icon(
+                        Icons.email_outlined,
+                        color: Color(0xFFB0B0B0),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'البريد الإلكتروني مطلوب';
+                        }
+                        if (!value.contains('@')) {
+                          return 'البريد الإلكتروني غير صحيح';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // Password Field
+                    CustomTextField(
+                      controller: _passwordController,
+                      hintText: 'كلمة المرور',
+                      obscureText: true,
+                      prefixIcon: const Icon(
+                        Icons.lock_outline,
+                        color: Color(0xFFB0B0B0),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'كلمة المرور مطلوبة';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    // Login Button
+                    CustomButton(
+                      text: 'تسجيل الدخول',
+                      onPressed: _handleLogin,
+                      isLoading: authProvider.isLoading,
+                      backgroundGradient: const LinearGradient(
+                        colors: [Color(0xFF075EC2), Color(0xFF266FD1)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Forgot Password Link
+                    TextButton(
+                      onPressed: () => context.go('/forget-password'),
+                      child: const Text(
+                        'نسيت كلمة المرور؟',
                         style: TextStyle(
-                          color: Color(0xFFB0B0B0),
+                          color: Color(0xFF0A84FF),
                           fontSize: 16,
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 48),
-                      // Email Field
-                      CustomTextField(
-                        controller: _emailController,
-                        hintText: 'البريد الإلكتروني',
-                        keyboardType: TextInputType.emailAddress,
-                        prefixIcon: const Icon(
-                          Icons.email_outlined,
-                          color: Color(0xFFB0B0B0),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'البريد الإلكتروني مطلوب';
-                          }
-                          if (!value.contains('@')) {
-                            return 'البريد الإلكتروني غير صحيح';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // Password Field
-                      CustomTextField(
-                        controller: _passwordController,
-                        hintText: 'كلمة المرور',
-                        obscureText: true,
-                        prefixIcon: const Icon(
-                          Icons.lock_outline,
-                          color: Color(0xFFB0B0B0),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'كلمة المرور مطلوبة';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                      // Login Button
-                      CustomButton(
-                        text: 'تسجيل الدخول',
-                        onPressed: _handleLogin,
-                        isLoading: authProvider.isLoading,
-                      ),
-                      const SizedBox(height: 24),
-                      // Forgot Password Link
-                      TextButton(
-                        onPressed: () => context.go('/forget-password'),
-                        child: const Text(
-                          'نسيت كلمة المرور؟',
+                    ),
+                    const SizedBox(height: 32),
+                    // Sign Up Link
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'ليس لديك حساب؟ ',
                           style: TextStyle(
-                            color: Color(0xFF0A84FF),
+                            color: Color(0xFFB0B0B0),
                             fontSize: 16,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 32),
-                      // Sign Up Link
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'ليس لديك حساب؟ ',
+                        TextButton(
+                          onPressed: () => context.go('/signup'),
+                          child: const Text(
+                            'إنشاء حساب جديد',
                             style: TextStyle(
-                              color: Color(0xFFB0B0B0),
+                              color: Color(0xFF0A84FF),
                               fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          TextButton(
-                            onPressed: () => context.go('/signup'),
-                            child: const Text(
-                              'إنشاء حساب جديد',
-                              style: TextStyle(
-                                color: Color(0xFF0A84FF),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),

@@ -8,6 +8,60 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/loading_overlay.dart';
 
+class _ExpiryDateFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // Remove all non-digit characters
+    String newText = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+
+    // If no input, return empty
+    if (newText.isEmpty) {
+      return TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
+
+    // Check first digit - only allow 0 or 1
+    int firstDigit = int.parse(newText[0]);
+    if (firstDigit > 1) {
+      // Invalid first digit, revert to old value
+      return oldValue;
+    }
+
+    // If first digit is 0, allow any second digit (01-09)
+    if (firstDigit == 0) {
+      if (newText.length >= 2) {
+        newText = '${newText.substring(0, 2)}/${newText.substring(2)}';
+      }
+    }
+    // If first digit is 1, only allow 0, 1, or 2 as second digit (10-12)
+    else if (firstDigit == 1) {
+      if (newText.length >= 2) {
+        int secondDigit = int.parse(newText[1]);
+        if (secondDigit > 2) {
+          // Invalid month, revert to old value
+          return oldValue;
+        }
+        newText = '${newText.substring(0, 2)}/${newText.substring(2)}';
+      }
+    }
+
+    // Limit to 4 digits total (MM/YY format)
+    if (newText.length > 5) {
+      newText = newText.substring(0, 5);
+    }
+
+    return TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newText.length),
+    );
+  }
+}
+
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
 
@@ -256,14 +310,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               keyboardType: TextInputType.number,
                               textDirection: TextDirection.ltr,
                               inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(4),
+                                _ExpiryDateFormatter(),
                               ],
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'تاريخ الانتهاء مطلوب';
                                 }
-                                if (value.length != 4) {
+                                if (value.length != 5) {
+                                  // MM/YY format
                                   return 'تاريخ الانتهاء غير صحيح';
                                 }
                                 return null;

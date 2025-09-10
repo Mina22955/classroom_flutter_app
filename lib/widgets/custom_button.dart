@@ -5,6 +5,7 @@ class CustomButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isLoading;
   final Color? backgroundColor;
+  final Gradient? backgroundGradient;
   final Color? textColor;
   final double? width;
   final double height;
@@ -16,6 +17,7 @@ class CustomButton extends StatelessWidget {
     this.onPressed,
     this.isLoading = false,
     this.backgroundColor,
+    this.backgroundGradient,
     this.textColor,
     this.width,
     this.height = 56,
@@ -24,6 +26,48 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Widget content = isLoading
+        ? const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          )
+        : Text(
+            text,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          );
+
+    if (backgroundGradient != null) {
+      return SizedBox(
+        width: width ?? double.infinity,
+        height: height,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: backgroundGradient,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: isLoading ? null : onPressed,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: padding ??
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Center(child: content),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
       width: width ?? double.infinity,
       height: height,
@@ -39,22 +83,7 @@ class CustomButton extends StatelessWidget {
           padding: padding ??
               const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         ),
-        child: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+        child: content,
       ),
     );
   }
