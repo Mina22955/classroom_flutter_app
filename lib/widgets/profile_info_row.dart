@@ -47,9 +47,10 @@ class ProfileInfoRow extends StatelessWidget {
                 value,
                 style: TextStyle(
                   color: valueColor ?? Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
+                softWrap: true,
               ),
             ),
             if (trailing != null) trailing!,

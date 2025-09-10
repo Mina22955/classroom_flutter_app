@@ -343,12 +343,10 @@ class ProfileScreen extends StatelessWidget {
                     child: Container(
                       height: 50,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0A84FF), Color(0xFF266FD1)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        color: Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: const Color(0xFF0A84FF), width: 1.5),
                       ),
                       child: Material(
                         color: Colors.transparent,
@@ -427,13 +425,21 @@ class ProfileScreen extends StatelessWidget {
                               },
                             );
                           },
-                          child: const Center(
-                            child: Text(
-                              'تعديل الملف الشخصي',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                          child: Center(
+                            child: ShaderMask(
+                              shaderCallback: (bounds) => const LinearGradient(
+                                colors: [Color(0xFF4FC3F7), Color(0xFF0A84FF)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ).createShader(bounds),
+                              blendMode: BlendMode.srcIn,
+                              child: const Text(
+                                'تعديل الملف الشخصي',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
@@ -446,12 +452,10 @@ class ProfileScreen extends StatelessWidget {
                     child: Container(
                       height: 50,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1C1C1E),
+                        color: Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
-                          width: 1,
-                        ),
+                            color: const Color(0xFF0A84FF), width: 1.5),
                       ),
                       child: Material(
                         color: Colors.transparent,
@@ -460,13 +464,21 @@ class ProfileScreen extends StatelessWidget {
                           onTap: () {
                             // TODO: Implement settings
                           },
-                          child: const Center(
-                            child: Text(
-                              'الإعدادات',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                          child: Center(
+                            child: ShaderMask(
+                              shaderCallback: (bounds) => const LinearGradient(
+                                colors: [Color(0xFF4FC3F7), Color(0xFF0A84FF)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ).createShader(bounds),
+                              blendMode: BlendMode.srcIn,
+                              child: const Text(
+                                'الإعدادات',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),

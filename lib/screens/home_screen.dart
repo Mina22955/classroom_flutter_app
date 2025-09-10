@@ -112,24 +112,32 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: TextField(
-                            controller: _classIdController,
-                            decoration: InputDecoration(
-                              hintText: 'ID الكلاس',
-                              filled: true,
-                              fillColor: const Color(0xFF1C1C1E),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.white.withOpacity(0.15),
-                                  width: 1,
+                          child: SizedBox(
+                            height: 52,
+                            child: TextField(
+                              controller: _classIdController,
+                              textAlignVertical: TextAlignVertical.center,
+                              decoration: InputDecoration(
+                                hintText: 'ID الكلاس',
+                                filled: true,
+                                fillColor: const Color(0xFF1C1C1E),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14,
                                 ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF0A84FF),
-                                  width: 1.5,
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: Colors.white.withOpacity(0.15),
+                                    width: 1,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF0A84FF),
+                                    width: 1.5,
+                                  ),
                                 ),
                               ),
                             ),

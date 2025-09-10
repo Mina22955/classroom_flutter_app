@@ -223,4 +223,114 @@ class ApiService {
     await _mockDelay();
     // Mock logout - clear token, etc.
   }
+
+  // ---------------- Dashboard Integration Stubs ----------------
+  // These methods model how the app will talk to the teacher dashboard
+  // in the future. They currently return mocked responses.
+
+  // Content models
+  Future<List<Map<String, dynamic>>> listNotes(
+      {required String classId}) async {
+    await _mockDelay();
+    return [
+      {
+        'id': 'n1',
+        'title': 'ملاحظة عامة',
+        'content': 'يرجى مراجعة ملخص الدرس الأول',
+        'createdAt': DateTime.now().toIso8601String(),
+      }
+    ];
+  }
+
+  Future<List<Map<String, dynamic>>> listVideos(
+      {required String classId}) async {
+    await _mockDelay();
+    return [
+      {
+        'id': 'v1',
+        'title': 'شرح الوحدة الأولى - الرياضيات',
+        'url': 'https://example.com/video1.mp4',
+        'durationSec': 1245, // 20:45
+      },
+      {
+        'id': 'v2',
+        'title': 'شرح الوحدة الثانية - الفيزياء',
+        'url': 'https://example.com/video2.mp4',
+        'durationSec': 900, // 15:00
+      },
+      {
+        'id': 'v3',
+        'title': 'مراجعة شاملة للفصل الأول',
+        'url': 'https://example.com/video3.mp4',
+        'durationSec': 1800, // 30:00
+      },
+      {
+        'id': 'v4',
+        'title': 'حل التمارين العملية',
+        'url': 'https://example.com/video4.mp4',
+        'durationSec': 720, // 12:00
+      },
+      {
+        'id': 'v5',
+        'title': 'شرح النظريات الأساسية',
+        'url': 'https://example.com/video5.mp4',
+        'durationSec': 1080, // 18:00
+      },
+    ];
+  }
+
+  Future<List<Map<String, dynamic>>> listExams(
+      {required String classId}) async {
+    await _mockDelay();
+    return [
+      {
+        'id': 'e1',
+        'title': 'امتحان الوحدة 1',
+        'pdfUrl': 'https://example.com/exams/e1.pdf',
+        'deadline': '2025-12-20',
+      }
+    ];
+  }
+
+  // Upload endpoints (teacher)
+  Future<Map<String, dynamic>> uploadPdf({
+    required String classId,
+    required String filePath,
+    required String title,
+  }) async {
+    await _mockDelay();
+    return {
+      'success': true,
+      'id': 'pdf_${DateTime.now().millisecondsSinceEpoch}',
+      'url':
+          'https://example.com/pdfs/${DateTime.now().millisecondsSinceEpoch}.pdf',
+    };
+  }
+
+  Future<Map<String, dynamic>> createExam({
+    required String classId,
+    required String title,
+    required String pdfUrl,
+    required String deadline,
+  }) async {
+    await _mockDelay();
+    return {
+      'success': true,
+      'id': 'e_${DateTime.now().millisecondsSinceEpoch}',
+    };
+  }
+
+  // Student submission
+  Future<Map<String, dynamic>> submitExam({
+    required String classId,
+    required String examId,
+    required String filePath,
+  }) async {
+    await _mockDelay();
+    return {
+      'success': true,
+      'submissionId': 's_${DateTime.now().millisecondsSinceEpoch}',
+      'status': 'received',
+    };
+  }
 }

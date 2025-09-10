@@ -40,6 +40,7 @@ class CustomButton extends StatelessWidget {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
+              height: 1.2,
             ),
           );
 
@@ -58,8 +59,7 @@ class CustomButton extends StatelessWidget {
               onTap: isLoading ? null : onPressed,
               borderRadius: BorderRadius.circular(12),
               child: Padding(
-                padding: padding ??
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: padding ?? const EdgeInsets.symmetric(horizontal: 20),
                 child: Center(child: content),
               ),
             ),
@@ -80,8 +80,7 @@ class CustomButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          padding: padding ??
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: padding ?? const EdgeInsets.symmetric(horizontal: 20),
         ),
         child: content,
       ),
