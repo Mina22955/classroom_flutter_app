@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
+
+  static const String baseUrl = 'https://class-room-backend-nodejs.vercel.app';
 
   // Mock delay to simulate network requests
   Future<void> _mockDelay() async {
@@ -15,62 +19,131 @@ class ApiService {
     required String email,
     required String password,
   }) async {
-    await _mockDelay();
-
-    // Mock validation
-    if (email.isEmpty || password.isEmpty) {
-      throw Exception('جميع الحقول مطلوبة');
-    }
-
-    if (!email.contains('@')) {
-      throw Exception('البريد الإلكتروني غير صحيح');
-    }
-
-    // Mock successful login
-    return {
-      'success': true,
-      'token': 'mock_jwt_token_${DateTime.now().millisecondsSinceEpoch}',
-      'user': {
-        'id': '1',
-        'name': 'مستخدم تجريبي',
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
         'email': email,
-        'phone': '+966501234567',
-      },
-    };
+        'password': password,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('فشل في تسجيل الدخول: ${response.body}');
+    }
   }
 
-  Future<Map<String, dynamic>> signup({
+  // Create pending user (new signup flow)
+  Future<Map<String, dynamic>?> createPendingUser({
     required String name,
     required String email,
     required String phone,
     required String password,
+    required String planId,
   }) async {
-    await _mockDelay();
+    try {
+      print('Creating pending user with email: $email');
+      print('API URL: $baseUrl/api/auth/pending');
 
-    // Mock validation
-    if (name.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
-      throw Exception('جميع الحقول مطلوبة');
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/pending'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'phone': phone,
+          'password': password,
+          'planId': planId,
+        }),
+      );
+
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 201) {
+        return jsonDecode(response.body); // contains pendingId
+      } else {
+        print(
+            'Error creating pending user: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Exception creating pending user: $e');
+      return null;
     }
+  }
 
-    if (!email.contains('@')) {
-      throw Exception('البريد الإلكتروني غير صحيح');
+  // Get available plans
+  Future<List<dynamic>> getPlans() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/api/plans/'));
+      print('Plans API Response Status: ${response.statusCode}');
+      print('Plans API Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // The API returns { "plans": [...] }, so we need to extract the plans array
+        if (data is Map<String, dynamic> && data.containsKey('plans')) {
+          return data['plans'] as List<dynamic>;
+        } else if (data is List) {
+          return data;
+        }
+      }
+      print('Error: Invalid response format or status code');
+      return [];
+    } catch (e) {
+      print('Error fetching plans: $e');
+      return [];
     }
+  }
 
-    if (password.length < 6) {
-      throw Exception('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+  // Create Stripe checkout session
+  Future<String?> createCheckoutSession({
+    required String pendingId,
+    required String planId,
+  }) async {
+    try {
+      print(
+          'Creating checkout session with pendingId: $pendingId, planId: $planId');
+      print('API URL: $baseUrl/api/payment/create-checkout-session');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/payment/create-checkout-session'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'pendingId': pendingId, 'planId': planId}),
+      );
+
+      print('Checkout session response status: ${response.statusCode}');
+      print('Checkout session response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['url']; // Stripe checkout URL
+      } else {
+        print(
+            'Error creating checkout session: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Exception creating checkout session: $e');
+      return null;
     }
+  }
 
-    // Mock successful signup
-    return {
-      'success': true,
-      'message': 'تم إنشاء الحساب بنجاح',
-      'user': {
-        'id': '1',
-        'name': name,
-        'email': email,
-        'phone': phone,
-      },
-    };
+  // Check signup status
+  Future<Map<String, dynamic>?> checkSignupStatus(String pendingId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/auth/status/$pendingId'),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      print('Error: ${response.body}');
+      return null;
+    }
   }
 
   Future<Map<String, dynamic>> requestPasswordReset({
@@ -131,8 +204,8 @@ class ApiService {
     };
   }
 
-  // Subscription Methods
-  Future<List<Map<String, dynamic>>> getPlans() async {
+  // Legacy getPlans method (keeping for backward compatibility)
+  Future<List<Map<String, dynamic>>> getPlansLegacy() async {
     await _mockDelay();
 
     return [

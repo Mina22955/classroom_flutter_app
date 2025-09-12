@@ -1,66 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../../providers/subscription_provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
-import '../../widgets/loading_overlay.dart';
-
-class _ExpiryDateFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    // Remove all non-digit characters
-    String newText = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
-
-    // If no input, return empty
-    if (newText.isEmpty) {
-      return TextEditingValue(
-        text: '',
-        selection: TextSelection.collapsed(offset: 0),
-      );
-    }
-
-    // Check first digit - only allow 0 or 1
-    int firstDigit = int.parse(newText[0]);
-    if (firstDigit > 1) {
-      // Invalid first digit, revert to old value
-      return oldValue;
-    }
-
-    // If first digit is 0, allow any second digit (01-09)
-    if (firstDigit == 0) {
-      if (newText.length >= 2) {
-        newText = '${newText.substring(0, 2)}/${newText.substring(2)}';
-      }
-    }
-    // If first digit is 1, only allow 0, 1, or 2 as second digit (10-12)
-    else if (firstDigit == 1) {
-      if (newText.length >= 2) {
-        int secondDigit = int.parse(newText[1]);
-        if (secondDigit > 2) {
-          // Invalid month, revert to old value
-          return oldValue;
-        }
-        newText = '${newText.substring(0, 2)}/${newText.substring(2)}';
-      }
-    }
-
-    // Limit to 4 digits total (MM/YY format)
-    if (newText.length > 5) {
-      newText = newText.substring(0, 5);
-    }
-
-    return TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: newText.length),
-    );
-  }
-}
+import 'package:url_launcher/url_launcher.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -70,348 +10,233 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _cardNumberController = TextEditingController();
-  final _expiryDateController = TextEditingController();
-  final _cvvController = TextEditingController();
-  final _cardholderNameController = TextEditingController();
-
-  @override
-  void dispose() {
-    _cardNumberController.dispose();
-    _expiryDateController.dispose();
-    _cvvController.dispose();
-    _cardholderNameController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _handlePayment() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final subscriptionProvider =
-        Provider.of<SubscriptionProvider>(context, listen: false);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    final success = await subscriptionProvider.processPayment(
-      cardNumber: _cardNumberController.text.trim(),
-      expiryDate: _expiryDateController.text.trim(),
-      cvv: _cvvController.text.trim(),
-      cardholderName: _cardholderNameController.text.trim(),
-    );
-
-    if (success && mounted) {
-      // Authenticate the user after successful payment
-      // In a real app, this would be done by the backend after payment verification
-      // For now, we'll simulate authentication
-      await authProvider.login(
-        email: 'user@example.com', // This would come from the signup data
-        password: 'password', // This would be stored securely
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              Text(subscriptionProvider.paymentSuccess ?? 'تم الدفع بنجاح'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      context.go('/home');
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(subscriptionProvider.error ?? 'فشل في معالجة الدفع'),
-          backgroundColor: Colors.red,
-        ),
-      );
+  Future<void> _openInExternalBrowser(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('لا يمكن فتح رابط الدفع'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error launching URL: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('خطأ في فتح رابط الدفع'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SubscriptionProvider>(
-      builder: (context, subscriptionProvider, child) {
-        final selectedPlan = subscriptionProvider.selectedPlan;
+    final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
+    final checkoutUrl = extra?['url'] as String?;
 
-        if (selectedPlan == null) {
-          return Scaffold(
-            backgroundColor: Colors.black,
-            appBar: AppBar(
-              backgroundColor: Colors.black,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                onPressed: () => context.go('/plans'),
-              ),
-              title: const Text('الدفع الإلكتروني'),
+    print('Payment screen - Extra data: $extra');
+    print('Payment screen - Checkout URL: $checkoutUrl');
+
+    if (checkoutUrl == null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          elevation: 0,
+          title: const Text(
+            'خطأ في الدفع',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
-            body: const Center(
-              child: Text(
-                'لم يتم اختيار خطة',
+          ),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: Colors.red,
+                size: 64,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'خطأ في تحميل صفحة الدفع',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 18,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-          );
-        }
-
-        return LoadingOverlay(
-          isLoading: subscriptionProvider.isPaymentProcessing,
-          loadingText: 'جاري معالجة الدفع...',
-          child: Scaffold(
-            backgroundColor: Colors.black,
-            appBar: AppBar(
-              backgroundColor: Colors.black,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                onPressed: () => context.go('/plans'),
+              const SizedBox(height: 8),
+              Text(
+                'يرجى المحاولة مرة أخرى',
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 16,
+                ),
               ),
-              title: const Text('الدفع الإلكتروني'),
-            ),
-            body: SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Selected Plan Summary
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1C1C1E),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFF0A84FF).withOpacity(0.3),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  selectedPlan['name'],
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                if (selectedPlan['popular'] == true)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF8E44AD),
-                                      borderRadius:
-                                          BorderRadius.all(Radius.circular(12)),
-                                    ),
-                                    child: const Text(
-                                      'الأكثر شعبية',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '${selectedPlan['price']}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${selectedPlan['currency']}',
-                                  style: const TextStyle(
-                                    color: Color(0xFFB0B0B0),
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '/ ${selectedPlan['duration']}',
-                                  style: const TextStyle(
-                                    color: Color(0xFFB0B0B0),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      // Payment Form Title
-                      const Text(
-                        'معلومات الدفع',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'أدخل بيانات بطاقتك الائتمانية',
-                        style: TextStyle(
-                          color: Color(0xFFB0B0B0),
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      // Card Number Field
-                      CustomTextField(
-                        controller: _cardNumberController,
-                        hintText: 'رقم البطاقة',
-                        keyboardType: TextInputType.number,
-                        textDirection: TextDirection.ltr,
-                        prefixIcon: const Icon(
-                          Icons.credit_card,
-                          color: Color(0xFFB0B0B0),
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(16),
-                        ],
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'رقم البطاقة مطلوب';
-                          }
-                          if (value.length < 16) {
-                            return 'رقم البطاقة يجب أن يكون 16 رقم';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // Expiry Date and CVV Row
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: CustomTextField(
-                              controller: _expiryDateController,
-                              hintText: 'MM/YY',
-                              keyboardType: TextInputType.number,
-                              textDirection: TextDirection.ltr,
-                              inputFormatters: [
-                                _ExpiryDateFormatter(),
-                              ],
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'تاريخ الانتهاء مطلوب';
-                                }
-                                if (value.length != 5) {
-                                  // MM/YY format
-                                  return 'تاريخ الانتهاء غير صحيح';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: CustomTextField(
-                              controller: _cvvController,
-                              hintText: 'CVV',
-                              keyboardType: TextInputType.number,
-                              textDirection: TextDirection.ltr,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(3),
-                              ],
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'CVV مطلوب';
-                                }
-                                if (value.length < 3) {
-                                  return 'CVV غير صحيح';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Cardholder Name Field
-                      CustomTextField(
-                        controller: _cardholderNameController,
-                        hintText: 'اسم حامل البطاقة',
-                        prefixIcon: const Icon(
-                          Icons.person_outline,
-                          color: Color(0xFFB0B0B0),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'اسم حامل البطاقة مطلوب';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                      // Mock data hint
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF8E44AD).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFF8E44AD).withOpacity(0.3),
-                          ),
-                        ),
-                        child: const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'بيانات تجريبية للاختبار:',
-                              style: TextStyle(
-                                color: Color(0xFF8E44AD),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'رقم البطاقة: 4242424242424242\nتاريخ الانتهاء: 12/25\nCVV: 123',
-                              style: TextStyle(
-                                color: Color(0xFFB0B0B0),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      // Pay Button
-                      CustomButton(
-                        text: 'إتمام الدفع',
-                        onPressed: _handlePayment,
-                        isLoading: subscriptionProvider.isPaymentProcessing,
-                      ),
-                    ],
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => context.go('/plans'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A84FF),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('العودة للخطط'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('تم إلغاء عملية الدفع'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          },
+        ),
+        title: const Text(
+          'الدفع الآمن',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.payment,
+                color: Color(0xFF0A84FF),
+                size: 80,
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'الدفع الآمن',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'انقر على الزر أدناه لفتح صفحة الدفع الآمنة في المتصفح',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 40),
+              ElevatedButton.icon(
+                onPressed: () => _openInExternalBrowser(checkoutUrl),
+                icon: const Icon(Icons.open_in_browser),
+                label: const Text('فتح صفحة الدفع'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A84FF),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                    vertical: 20,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
-            ),
+              const SizedBox(height: 24),
+              TextButton(
+                onPressed: () => context.go('/plans'),
+                child: const Text(
+                  'العودة للخطط',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1C1C1E),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'معلومات الدفع:',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'سيتم فتح صفحة دفع آمنة من Stripe',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'بعد إتمام الدفع، سيتم تفعيل حسابك تلقائياً',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

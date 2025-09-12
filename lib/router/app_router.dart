@@ -4,14 +4,17 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
+import '../screens/auth/signup_with_payment_screen.dart';
 import '../screens/auth/forget_password_screen.dart';
 import '../screens/auth/otp_verification_screen.dart';
 import '../screens/auth/reset_password_screen.dart';
 import '../screens/subscription/plans_screen.dart';
 import '../screens/subscription/payment_screen.dart';
+import '../screens/subscription/plan_selection_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/classroom_screen.dart';
+import '../screens/debug/api_test_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -21,6 +24,7 @@ class AppRouter {
       final isAuthenticated = authProvider.isAuthenticated;
       final isLoginRoute = state.uri.path == '/login';
       final isSignupRoute = state.uri.path == '/signup';
+      final isPlanSelectionRoute = state.uri.path == '/plan-selection';
       final isForgetPasswordRoute = state.uri.path == '/forget-password';
       final isOtpRoute = state.uri.path == '/otp';
       final isResetPasswordRoute = state.uri.path == '/reset-password';
@@ -32,6 +36,7 @@ class AppRouter {
       if (isAuthenticated &&
           (isLoginRoute ||
               isSignupRoute ||
+              isPlanSelectionRoute ||
               isForgetPasswordRoute ||
               isOtpRoute ||
               isResetPasswordRoute)) {
@@ -43,10 +48,11 @@ class AppRouter {
         return '/home';
       }
 
-      // If user is not authenticated and trying to access protected routes (except plans and payment), redirect to login
+      // If user is not authenticated and trying to access protected routes (except auth and payment flows), redirect to login
       if (!isAuthenticated &&
           !isLoginRoute &&
           !isSignupRoute &&
+          !isPlanSelectionRoute &&
           !isForgetPasswordRoute &&
           !isOtpRoute &&
           !isResetPasswordRoute &&
@@ -64,8 +70,18 @@ class AppRouter {
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
+        path: '/plan-selection',
+        name: 'plan-selection',
+        builder: (context, state) => const PlanSelectionScreen(),
+      ),
+      GoRoute(
         path: '/signup',
         name: 'signup',
+        builder: (context, state) => const SignupWithPaymentScreen(),
+      ),
+      GoRoute(
+        path: '/signup-old',
+        name: 'signup-old',
         builder: (context, state) => const SignUpScreen(),
       ),
       GoRoute(
@@ -119,6 +135,11 @@ class AppRouter {
           final className = extra?['name']?.toString() ?? 'الكلاس';
           return ClassroomScreen(classId: classId, className: className);
         },
+      ),
+      GoRoute(
+        path: '/api-test',
+        name: 'api-test',
+        builder: (context, state) => const ApiTestScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

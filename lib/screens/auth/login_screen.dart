@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../utils/signup_status_checker.dart';
 // Removed global loading overlay in favor of inline button loader
 
 class LoginScreen extends StatefulWidget {
@@ -17,6 +19,40 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String _apiTestResult = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // Check signup status when login screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SignupStatusChecker.checkAndHandleStatus(context);
+    });
+  }
+
+  Future<void> _testApiConnection() async {
+    setState(() {
+      _apiTestResult = 'جاري اختبار الاتصال...';
+    });
+
+    try {
+      const baseUrl = 'https://class-room-backend-nodejs.vercel.app';
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/plans'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+
+      setState(() {
+        _apiTestResult =
+            'الاستجابة: ${response.statusCode}\nالمحتوى: ${response.body}';
+      });
+    } catch (e) {
+      setState(() {
+        _apiTestResult = 'خطأ في الاتصال: $e';
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -161,7 +197,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () => context.go('/signup'),
+                          onPressed: () => context.go('/plan-selection'),
                           child: const Text(
                             'إنشاء حساب جديد',
                             style: TextStyle(
@@ -173,6 +209,39 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
+
+                    const SizedBox(height: 20),
+
+                    // API Test Button (for debugging)
+                    TextButton(
+                      onPressed: _testApiConnection,
+                      child: Text(
+                        'اختبار الاتصال بالخادم',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+
+                    if (_apiTestResult.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1C1C1E),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _apiTestResult,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

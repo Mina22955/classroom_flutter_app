@@ -14,6 +14,18 @@ class PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Handle API data structure - provide defaults for missing fields
+    final planName = plan['name'] ?? 'خطة غير محددة';
+    final planPrice = plan['price'] ?? 0;
+    final planCurrency = plan['currency'] ?? 'SAR';
+    final planDuration = plan['duration'] ?? 'شهر';
+    final planFeatures = plan['features'] as List<dynamic>? ??
+        [
+          'وصول كامل للمحتوى',
+          'دعم فني 24/7',
+          'تحديثات مستمرة',
+          'إشعارات فورية',
+        ];
     final isPopular = plan['popular'] == true;
 
     return GestureDetector(
@@ -69,7 +81,7 @@ class PlanCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          plan['name'],
+                          planName,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -110,7 +122,7 @@ class PlanCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${plan['price']}',
+                        '$planPrice',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 32,
@@ -119,7 +131,7 @@ class PlanCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${plan['currency']}',
+                        planCurrency,
                         style: const TextStyle(
                           color: Color(0xFFB0B0B0),
                           fontSize: 16,
@@ -127,7 +139,7 @@ class PlanCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '/ ${plan['duration']}',
+                        '/ $planDuration',
                         style: const TextStyle(
                           color: Color(0xFFB0B0B0),
                           fontSize: 14,
@@ -145,7 +157,7 @@ class PlanCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ...(plan['features'] as List<dynamic>)
+                  ...planFeatures
                       .map((feature) => Padding(
                             padding: const EdgeInsets.only(bottom: 6),
                             child: Row(
@@ -158,7 +170,7 @@ class PlanCard extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    feature,
+                                    feature.toString(),
                                     style: const TextStyle(
                                       color: Color(0xFFB0B0B0),
                                       fontSize: 14,

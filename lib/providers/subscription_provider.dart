@@ -26,7 +26,7 @@ class SubscriptionProvider extends ChangeNotifier {
 
     try {
       final plans = await _apiService.getPlans();
-      _plans = plans;
+      _plans = plans.cast<Map<String, dynamic>>();
       _setLoading(false);
     } catch (e) {
       _setError(e.toString());
