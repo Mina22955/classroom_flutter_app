@@ -25,6 +25,8 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
   final ApiService _apiService = ApiService();
   List<Map<String, dynamic>> _videos = [];
   bool _isLoadingVideos = false;
+  // Notes filter: 0=All, 1=Last day, 2=Last week, 3=Last month
+  int _notesFilter = 0;
 
   // Track expansion state for video and exam cards
   final Map<String, bool> _expandedStates = {};
@@ -62,19 +64,77 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
       // الملاحظات (حائط ملاحظات - قراءة فقط)
       items = [
         {
+          'title': 'ملاحظة طويلة للاختبار',
+          'content':
+              'هذه ملاحظة تجريبية طويلة للتأكد من أن التصميم يتعامل مع النصوص الكبيرة بشكل صحيح. نريد أن نرى كيف يتم الالتفاف داخل الفقاعة والمحاذاة في الاتجاه من اليمين إلى اليسار. كذلك يجب التأكد من أن المسافات والسطور بين الجمل تبدو مريحة للقراءة ولا تخرج عن الحدود. في حال زاد طول النص كثيراً، ينبغي أن يواصل السطر التالي داخل نفس الفقاعة بدون كسر غير مرغوب. وأخيراً، نتأكد أن الأيقونة والزمن يبقيان في مكانهما بشكل سليم.',
+          'timestamp': '14:30 2025-09-10'
+        },
+        {
           'title': 'ملاحظة من المعلم',
-          'content': 'أحسنتم في واجب الدرس الماضي. الرجاء مراجعة سؤال 3 جيداً.'
+          'content': 'أحسنتم في واجب الدرس الماضي. الرجاء مراجعة سؤال 3 جيداً.',
+          'timestamp': '10:30 2025-09-10'
         },
         {
           'title': 'تنبيه',
           'content':
-              'سيتم إجراء اختبار قصير في الحصة القادمة على الوحدة الأولى.'
+              'سيتم إجراء اختبار قصير في الحصة القادمة على الوحدة الأولى.',
+          'timestamp': '12:15 2025-09-10'
         },
         {
           'title': 'مراجعة',
-          'content': 'اقرأ الملخص المرفق في الملفات قبل مشاهدة الفيديو التالي.'
+          'content': 'اقرأ الملخص المرفق في الملفات قبل مشاهدة الفيديو التالي.',
+          'timestamp': '13:05 2025-09-10'
         },
       ];
+
+      // Sort: newest first (timestamp format: HH:mm yyyy-MM-dd)
+      int parseTwo(String s) => int.tryParse(s) ?? 0;
+      DateTime parseTs(String? ts) {
+        if (ts == null) return DateTime.fromMillisecondsSinceEpoch(0);
+        try {
+          final parts = ts.split(' '); // [HH:mm, yyyy-MM-dd]
+          if (parts.length != 2) return DateTime.fromMillisecondsSinceEpoch(0);
+          final time = parts[0].split(':');
+          final date = parts[1].split('-');
+          if (time.length != 2 || date.length != 3) {
+            return DateTime.fromMillisecondsSinceEpoch(0);
+          }
+          final hour = parseTwo(time[0]);
+          final minute = parseTwo(time[1]);
+          final year = int.tryParse(date[0]) ?? 1970;
+          final month = parseTwo(date[1]);
+          final day = parseTwo(date[2]);
+          return DateTime(year, month, day, hour, minute);
+        } catch (_) {
+          return DateTime.fromMillisecondsSinceEpoch(0);
+        }
+      }
+
+      // Apply time filter
+      DateTime now = DateTime.now();
+      Duration window;
+      if (_notesFilter == 1) {
+        window = const Duration(days: 1);
+      } else if (_notesFilter == 2) {
+        window = const Duration(days: 7);
+      } else if (_notesFilter == 3) {
+        window = const Duration(days: 30);
+      } else {
+        window = Duration.zero; // all
+      }
+
+      if (window != Duration.zero) {
+        final cutoff = now.subtract(window);
+        items = items
+            .where((m) => parseTs(m['timestamp'] as String?).isAfter(cutoff))
+            .toList();
+      }
+
+      items.sort((a, b) {
+        final ta = parseTs(a['timestamp'] as String?);
+        final tb = parseTs(b['timestamp'] as String?);
+        return tb.compareTo(ta); // newest first
+      });
     } else if (_currentIndex == 1) {
       // الملفات
       items = List.generate(
@@ -82,6 +142,7 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
           (i) => {
                 'title': 'ملف رقم ${i + 1}',
                 'content': 'تفاصيل الملف والوصف المختصر.',
+                'file': 'material_${i + 1}.pdf',
               });
     } else if (_currentIndex == 2) {
       // الفيديوهات: استخدام البيانات من API
@@ -122,8 +183,8 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
     }
 
     // Render lists per section
-    if (_currentIndex == 0 || _currentIndex == 1) {
-      // Notes / Files use the same NoteCard look for now
+    if (_currentIndex == 0) {
+      // Notes
       return Directionality(
         textDirection: TextDirection.rtl,
         child: ListView.separated(
@@ -133,7 +194,140 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
           itemBuilder: (context, index) => NoteCard(
             title: items[index]['title']!,
             content: items[index]['content']!,
+            timestamp: items[index]['timestamp'] as String?,
+            showTitle: false,
+            // Student view: keep actions hidden
           ),
+        ),
+      );
+    } else if (_currentIndex == 1) {
+      // Files: same card style as Exams but without deadline and without submit button
+      return Directionality(
+        textDirection: TextDirection.rtl,
+        child: ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: items.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            final file = items[index];
+            final fileKey = 'file_${file['title']}';
+            final isExpanded = _expandedStates[fileKey] ?? false;
+
+            return Theme(
+              data: Theme.of(context).copyWith(
+                dividerColor: Colors.transparent,
+                splashColor: Colors.white10,
+                hoverColor: Colors.white10,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1C1C1E),
+                  borderRadius: BorderRadius.circular(16),
+                  border: isExpanded
+                      ? Border.all(
+                          color: const Color(0xFF0A84FF),
+                          width: 2,
+                        )
+                      : Border.all(
+                          color: Colors.white.withOpacity(0.08), width: 1),
+                  gradient: isExpanded
+                      ? LinearGradient(
+                          colors: [
+                            const Color(0xFF4FC3F7).withOpacity(0.1),
+                            const Color(0xFF0A84FF).withOpacity(0.1),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                ),
+                child: ExpansionTile(
+                  collapsedIconColor: const Color(0xFF0A84FF),
+                  iconColor: const Color(0xFF0A84FF),
+                  tilePadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  onExpansionChanged: (expanded) {
+                    setState(() {
+                      _expandedStates[fileKey] = expanded;
+                    });
+                  },
+                  title: ShaderMask(
+                    shaderCallback: (bounds) => isExpanded
+                        ? const LinearGradient(
+                            colors: [Color(0xFF4FC3F7), Color(0xFF0A84FF)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ).createShader(bounds)
+                        : const LinearGradient(
+                            colors: [Colors.white, Colors.white],
+                          ).createShader(bounds),
+                    child: Text(
+                      file['title']!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      file['content']!,
+                      style: const TextStyle(
+                          color: Color(0xFFB0B0B0), fontSize: 13),
+                    ),
+                  ),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: Colors.white.withOpacity(0.06), width: 1),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.insert_drive_file,
+                              color: Color(0xFF0A84FF)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              file['file']!,
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 14),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF4FC3F7), Color(0xFF0A84FF)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'ملف',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       );
     }
@@ -420,6 +614,25 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
               ),
             ),
           if (_showSearch) const SizedBox(height: 8),
+          // Notes filter chips (only on notes tab)
+          if (_currentIndex == 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Directionality(
+                textDirection: TextDirection.rtl,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildFilterChip(0, 'الكل'),
+                    _buildFilterChip(1, 'آخر يوم'),
+                    _buildFilterChip(2, 'آخر أسبوع'),
+                    _buildFilterChip(3, 'آخر شهر'),
+                  ],
+                ),
+              ),
+            ),
+          if (_currentIndex == 0) const SizedBox(height: 8),
           // Content
           Expanded(child: _buildCurrentSectionList()),
         ],
@@ -481,6 +694,29 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
     final minutes = seconds ~/ 60;
     final remainingSeconds = seconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildFilterChip(int value, String label) {
+    final bool selected = _notesFilter == value;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: selected ? Colors.black : const Color(0xFF0A84FF),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      selected: selected,
+      onSelected: (_) => setState(() => _notesFilter = value),
+      selectedColor: const Color(0xFF0A84FF),
+      backgroundColor: Colors.transparent,
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: const Color(0xFF0A84FF).withOpacity(0.9),
+          width: 1.3,
+        ),
+      ),
+    );
   }
 
   Widget _buildVideoCard(Map<String, dynamic> video) {
