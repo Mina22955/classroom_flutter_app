@@ -27,8 +27,9 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _authProvider = AuthProvider();
-    // Load pending ID from storage on app start
+    // Load pending ID and login data from storage on app start
     _authProvider.loadPendingId();
+    _authProvider.loadStoredLoginData();
   }
 
   @override

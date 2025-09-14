@@ -21,6 +21,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
+  bool _isEmailFocused = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailFocusNode.addListener(() {
+      setState(() {
+        _isEmailFocused = _emailFocusNode.hasFocus;
+      });
+    });
+  }
 
   @override
   void dispose() {
@@ -29,11 +42,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _emailFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _handleSignUp() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Clear any previous error
+    setState(() {
+      _errorMessage = null;
+    });
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
@@ -47,12 +66,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (success && mounted) {
       context.go('/plans');
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'فشل في إنشاء الحساب'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      setState(() {
+        _errorMessage = authProvider.error ?? 'فشل في إنشاء الحساب';
+      });
+      // Auto-dismiss error after 3 seconds
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _errorMessage = null;
+          });
+        }
+      });
     }
   }
 
@@ -103,6 +127,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 32),
+
                       // Name Field
                       CustomTextField(
                         controller: _nameController,
@@ -122,24 +147,68 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      // Email Field
-                      CustomTextField(
-                        controller: _emailController,
-                        hintText: 'البريد الإلكتروني',
-                        keyboardType: TextInputType.emailAddress,
-                        prefixIcon: const Icon(
-                          Icons.email_outlined,
-                          color: Color(0xFFB0B0B0),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'البريد الإلكتروني مطلوب';
-                          }
-                          if (!value.contains('@')) {
-                            return 'البريد الإلكتروني غير صحيح';
-                          }
-                          return null;
-                        },
+                      // Email Field with helpful message
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Helpful message that appears when email field is focused
+                          if (_isEmailFocused)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0A84FF).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color:
+                                      const Color(0xFF0A84FF).withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    color: const Color(0xFF0A84FF),
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'الرجاء استخدام حساب جيميل مفعل',
+                                      style: TextStyle(
+                                        color: const Color(0xFF0A84FF),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          CustomTextField(
+                            controller: _emailController,
+                            focusNode: _emailFocusNode,
+                            hintText: 'البريد الإلكتروني',
+                            keyboardType: TextInputType.emailAddress,
+                            prefixIcon: const Icon(
+                              Icons.email_outlined,
+                              color: Color(0xFFB0B0B0),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'البريد الإلكتروني مطلوب';
+                              }
+                              if (!value.contains('@')) {
+                                return 'البريد الإلكتروني غير صحيح';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       // Phone Field
@@ -205,6 +274,42 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         },
                       ),
                       const SizedBox(height: 32),
+
+                      // Error Message Display (above button)
+                      if (_errorMessage != null)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.red.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.red[400],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: TextStyle(
+                                    color: Colors.red[400],
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                       // Sign Up Button
                       CustomButton(
                         text: 'إنشاء حساب',

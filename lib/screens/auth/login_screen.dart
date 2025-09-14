@@ -19,7 +19,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _errorMessage;
   String _apiTestResult = '';
+  bool _isPasswordVisible = false;
 
   @override
   void initState() {
@@ -27,6 +29,12 @@ class _LoginScreenState extends State<LoginScreen> {
     // Check signup status when login screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SignupStatusChecker.checkAndHandleStatus(context);
+    });
+  }
+
+  void _togglePasswordVisibility() {
+    setState(() {
+      _isPasswordVisible = !_isPasswordVisible;
     });
   }
 
@@ -64,6 +72,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Clear any previous error
+    setState(() {
+      _errorMessage = null;
+    });
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     final success = await authProvider.login(
@@ -74,12 +87,17 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success && mounted) {
       context.go('/plans');
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'فشل في تسجيل الدخول'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      setState(() {
+        _errorMessage = authProvider.error ?? 'فشل في تسجيل الدخول';
+      });
+      // Auto-dismiss error after 3 seconds
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _errorMessage = null;
+          });
+        }
+      });
     }
   }
 
@@ -148,10 +166,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     CustomTextField(
                       controller: _passwordController,
                       hintText: 'كلمة المرور',
-                      obscureText: true,
+                      obscureText: !_isPasswordVisible,
                       prefixIcon: const Icon(
                         Icons.lock_outline,
                         color: Color(0xFFB0B0B0),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: const Color(0xFFB0B0B0),
+                        ),
+                        onPressed: _togglePasswordVisibility,
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -161,6 +188,42 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
+
+                    // Error Message Display (above button)
+                    if (_errorMessage != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.red.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: Colors.red[400],
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: TextStyle(
+                                  color: Colors.red[400],
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                     // Login Button
                     CustomButton(
                       text: 'تسجيل الدخول',

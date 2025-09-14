@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/api_service.dart';
@@ -35,19 +36,36 @@ class AuthProvider extends ChangeNotifier {
         password: password,
       );
 
-      if (response['success'] == true) {
-        _token = response['token'];
+      // Check if login was successful based on API response structure
+      if (response['accessToken'] != null && response['user'] != null) {
+        _token = response['accessToken'];
         _user = response['user'];
         _isAuthenticated = true;
+
+        // Save login data to secure storage
+        await _saveLoginData();
+
         _setLoading(false);
+        print(
+            'AuthProvider: Login successful, token: ${_token?.substring(0, 10)}...');
         return true;
       } else {
-        _setError(response['message'] ?? 'فشل في تسجيل الدخول');
+        // Login failed - extract error message
+        String errorMessage =
+            response['message'] ?? response['error'] ?? 'فشل في تسجيل الدخول';
+        print('AuthProvider: Login failed - $errorMessage');
+        _setError(errorMessage);
         _setLoading(false);
         return false;
       }
     } catch (e) {
-      _setError(e.toString());
+      // Extract error message from exception
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage =
+            errorMessage.substring(11); // Remove 'Exception: ' prefix
+      }
+      _setError(errorMessage);
       _setLoading(false);
       return false;
     }
@@ -73,18 +91,28 @@ class AuthProvider extends ChangeNotifier {
         planId: '68c480b976422a6a54f3fa72', // Default plan ID
       );
 
-      if (response != null && response['pendingId'] != null) {
+      if (response['pendingId'] != null) {
         _pendingId = response['pendingId'];
         await _secureStorage.write(key: 'pendingId', value: _pendingId!);
         _setLoading(false);
         return true;
       } else {
-        _setError('فشل في إنشاء الحساب المؤقت');
+        String errorMsg = response['message'] ??
+            response['error'] ??
+            response['msg'] ??
+            'فشل في إنشاء الحساب المؤقت';
+        _setError(errorMsg);
         _setLoading(false);
         return false;
       }
     } catch (e) {
-      _setError(e.toString());
+      // Extract error message from exception
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage =
+            errorMessage.substring(11); // Remove 'Exception: ' prefix
+      }
+      _setError(errorMessage);
       _setLoading(false);
       return false;
     }
@@ -97,8 +125,12 @@ class AuthProvider extends ChangeNotifier {
     required String phone,
     required String password,
     required String planId,
+    bool manageLoading =
+        true, // New parameter to control loading state management
   }) async {
-    _setLoading(true);
+    if (manageLoading) {
+      _setLoading(true);
+    }
     _clearError();
 
     try {
@@ -112,24 +144,48 @@ class AuthProvider extends ChangeNotifier {
       );
 
       print('AuthProvider: Response received: $response');
+      print('AuthProvider: Response type: ${response.runtimeType}');
+      print(
+          'AuthProvider: Has pendingId: ${response.containsKey('pendingId')}');
+      print('AuthProvider: PendingId value: ${response['pendingId']}');
 
-      if (response != null && response['pendingId'] != null) {
+      if (response['pendingId'] != null) {
         _pendingId = response['pendingId'];
         await _secureStorage.write(key: 'pendingId', value: _pendingId!);
         print('AuthProvider: Pending ID stored: $_pendingId');
-        _setLoading(false);
+        if (manageLoading) {
+          _setLoading(false);
+        }
         return true;
       } else {
-        final errorMsg = response?['message'] ?? 'فشل في إنشاء الحساب المؤقت';
-        print('AuthProvider: Error - $errorMsg');
+        // If no pendingId in response, check for error message
+        String errorMsg = response['message'] ??
+            response['error'] ??
+            response['msg'] ??
+            'فشل في إنشاء الحساب المؤقت';
+        print('AuthProvider: No pendingId found, error message: $errorMsg');
+        print(
+            'AuthProvider: Available keys in response: ${response.keys.toList()}');
         _setError(errorMsg);
-        _setLoading(false);
+        if (manageLoading) {
+          _setLoading(false);
+        }
         return false;
       }
     } catch (e) {
-      print('AuthProvider: Exception - $e');
-      _setError('خطأ في الاتصال: ${e.toString()}');
-      _setLoading(false);
+      print('AuthProvider: Exception caught - $e');
+      print('AuthProvider: Exception type - ${e.runtimeType}');
+      // Extract error message from exception
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage =
+            errorMessage.substring(11); // Remove 'Exception: ' prefix
+      }
+      print('AuthProvider: Final error message - $errorMessage');
+      _setError(errorMessage);
+      if (manageLoading) {
+        _setLoading(false);
+      }
       return false;
     }
   }
@@ -140,7 +196,13 @@ class AuthProvider extends ChangeNotifier {
       final plans = await _apiService.getPlans();
       return plans.cast<Map<String, dynamic>>();
     } catch (e) {
-      _setError(e.toString());
+      // Extract error message from exception
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage =
+            errorMessage.substring(11); // Remove 'Exception: ' prefix
+      }
+      _setError(errorMessage);
       return [];
     }
   }
@@ -158,7 +220,13 @@ class AuthProvider extends ChangeNotifier {
         planId: planId,
       );
     } catch (e) {
-      _setError(e.toString());
+      // Extract error message from exception
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage =
+            errorMessage.substring(11); // Remove 'Exception: ' prefix
+      }
+      _setError(errorMessage);
       return null;
     }
   }
@@ -180,7 +248,13 @@ class AuthProvider extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      _setError(e.toString());
+      // Extract error message from exception
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage =
+            errorMessage.substring(11); // Remove 'Exception: ' prefix
+      }
+      _setError(errorMessage);
       return false;
     }
   }
@@ -210,7 +284,13 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _setError(e.toString());
+      // Extract error message from exception
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage =
+            errorMessage.substring(11); // Remove 'Exception: ' prefix
+      }
+      _setError(errorMessage);
       _setLoading(false);
       return false;
     }
@@ -239,7 +319,13 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _setError(e.toString());
+      // Extract error message from exception
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage =
+            errorMessage.substring(11); // Remove 'Exception: ' prefix
+      }
+      _setError(errorMessage);
       _setLoading(false);
       return false;
     }
@@ -270,7 +356,13 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _setError(e.toString());
+      // Extract error message from exception
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage =
+            errorMessage.substring(11); // Remove 'Exception: ' prefix
+      }
+      _setError(errorMessage);
       _setLoading(false);
       return false;
     }
@@ -290,6 +382,48 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Save login data to secure storage
+  Future<void> _saveLoginData() async {
+    if (_token != null && _user != null) {
+      await _secureStorage.write(key: 'auth_token', value: _token!);
+      await _secureStorage.write(key: 'user_data', value: jsonEncode(_user!));
+      await _secureStorage.write(key: 'is_authenticated', value: 'true');
+      print('AuthProvider: Login data saved to secure storage');
+    }
+  }
+
+  // Load login data from secure storage
+  Future<void> loadStoredLoginData() async {
+    try {
+      final token = await _secureStorage.read(key: 'auth_token');
+      final userDataString = await _secureStorage.read(key: 'user_data');
+      final isAuthenticatedString =
+          await _secureStorage.read(key: 'is_authenticated');
+
+      if (token != null &&
+          userDataString != null &&
+          isAuthenticatedString == 'true') {
+        _token = token;
+        _user = jsonDecode(userDataString);
+        _isAuthenticated = true;
+        print('AuthProvider: Login data loaded from secure storage');
+        notifyListeners();
+      }
+    } catch (e) {
+      print('AuthProvider: Error loading stored login data: $e');
+      // Clear invalid data
+      await _clearStoredLoginData();
+    }
+  }
+
+  // Clear stored login data
+  Future<void> _clearStoredLoginData() async {
+    await _secureStorage.delete(key: 'auth_token');
+    await _secureStorage.delete(key: 'user_data');
+    await _secureStorage.delete(key: 'is_authenticated');
+    print('AuthProvider: Stored login data cleared');
+  }
+
   // Logout
   Future<void> logout() async {
     _setLoading(true);
@@ -300,11 +434,20 @@ class AuthProvider extends ChangeNotifier {
       // Ignore logout errors
     }
 
+    // Clear stored login data
+    await _clearStoredLoginData();
+
     _token = null;
     _user = null;
     _isAuthenticated = false;
     _clearError();
     _setLoading(false);
+  }
+
+  // Public method to set loading state
+  void setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
   }
 
   // Private methods

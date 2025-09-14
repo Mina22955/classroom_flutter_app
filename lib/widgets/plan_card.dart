@@ -14,18 +14,31 @@ class PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Handle API data structure - provide defaults for missing fields
-    final planName = plan['name'] ?? 'خطة غير محددة';
-    final planPrice = plan['price'] ?? 0;
-    final planCurrency = plan['currency'] ?? 'SAR';
-    final planDuration = plan['duration'] ?? 'شهر';
-    final planFeatures = plan['features'] as List<dynamic>? ??
-        [
-          'وصول كامل للمحتوى',
-          'دعم فني 24/7',
-          'تحديثات مستمرة',
-          'إشعارات فورية',
-        ];
+    // Handle API data structure - use correct field names from API
+    final planName = plan['title'] ?? 'خطة غير محددة';
+    final planDescription = plan['description'] ?? '';
+    final planPrice = plan['price'] ?? '0.00';
+    final planCurrency = '\$';
+
+    // Calculate duration display from API fields
+    final durationValue = plan['durationValue'] ?? 1;
+    final durationType = plan['durationType'] ?? 'month';
+    String planDuration;
+    if (durationType == 'year') {
+      planDuration = durationValue == 1 ? 'سنة' : '$durationValue سنوات';
+    } else {
+      planDuration = durationValue == 1 ? 'شهر' : '$durationValue أشهر';
+    }
+
+    // Use description as features or provide default features
+    final planFeatures = planDescription.isNotEmpty
+        ? [planDescription]
+        : [
+            'وصول كامل للمحتوى',
+            'دعم فني 24/7',
+            'تحديثات مستمرة',
+            'إشعارات فورية',
+          ];
     final isPopular = plan['popular'] == true;
 
     return GestureDetector(

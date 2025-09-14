@@ -21,12 +21,20 @@ class _SignupWithPaymentScreenState extends State<SignupWithPaymentScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
+  bool _isEmailFocused = false;
+  String? _errorMessage;
 
   Map<String, dynamic>? _selectedPlan;
 
   @override
   void initState() {
     super.initState();
+    _emailFocusNode.addListener(() {
+      setState(() {
+        _isEmailFocused = _emailFocusNode.hasFocus;
+      });
+    });
   }
 
   @override
@@ -53,6 +61,7 @@ class _SignupWithPaymentScreenState extends State<SignupWithPaymentScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _emailFocusNode.dispose();
     super.dispose();
   }
 
@@ -60,52 +69,89 @@ class _SignupWithPaymentScreenState extends State<SignupWithPaymentScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedPlan == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى اختيار خطة اشتراك أولاً'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      setState(() {
+        _errorMessage = 'يرجى اختيار خطة اشتراك أولاً';
+      });
       return;
     }
 
+    // Clear any previous error
+    setState(() {
+      _errorMessage = null;
+    });
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final success = await authProvider.createPendingUser(
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      phone: _phoneController.text.trim(),
-      password: _passwordController.text,
-      planId: _selectedPlan!['_id'],
-    );
+    // Set loading state manually to maintain it throughout the entire process
+    authProvider.setLoading(true);
 
-    if (success && mounted) {
-      // Create checkout session and navigate to payment screen
-      print('Creating checkout session for plan: ${_selectedPlan!['_id']}');
-      final checkoutUrl =
-          await authProvider.createCheckoutSession(_selectedPlan!['_id']);
-      print('Checkout URL received: $checkoutUrl');
-
-      if (checkoutUrl != null && mounted) {
-        print('Navigating to payment screen with URL: $checkoutUrl');
-        context.go('/payment', extra: {'url': checkoutUrl});
-      } else if (mounted) {
-        print(
-            'Failed to create checkout session. Error: ${authProvider.error}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.error ?? 'فشل في إنشاء جلسة الدفع'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'حدث خطأ غير متوقع'),
-          backgroundColor: Colors.red,
-        ),
+    try {
+      final success = await authProvider.createPendingUser(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
+        password: _passwordController.text,
+        planId: _selectedPlan!['_id'] ?? '',
+        manageLoading: false, // Let the UI manage loading state
       );
+
+      if (success && mounted) {
+        // Create checkout session and navigate to payment screen
+        print('Creating checkout session for plan: ${_selectedPlan!['_id']}');
+        final checkoutUrl = await authProvider
+            .createCheckoutSession(_selectedPlan!['_id'] ?? '');
+        print('Checkout URL received: $checkoutUrl');
+
+        if (checkoutUrl != null && mounted) {
+          print('Navigating to payment screen with URL: $checkoutUrl');
+          // Navigate immediately without clearing loading state
+          context.go('/payment', extra: {'url': checkoutUrl});
+          return; // Exit early to prevent loading state from being cleared
+        } else if (mounted) {
+          print(
+              'Failed to create checkout session. Error: ${authProvider.error}');
+          authProvider.setLoading(false); // Clear loading on error
+          setState(() {
+            _errorMessage = authProvider.error ?? 'فشل في إنشاء جلسة الدفع';
+          });
+          // Auto-dismiss error after 3 seconds
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted) {
+              setState(() {
+                _errorMessage = null;
+              });
+            }
+          });
+        }
+      } else if (mounted) {
+        authProvider.setLoading(false); // Clear loading on error
+        setState(() {
+          _errorMessage = authProvider.error ?? 'حدث خطأ غير متوقع';
+        });
+        // Auto-dismiss error after 3 seconds
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            setState(() {
+              _errorMessage = null;
+            });
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        authProvider.setLoading(false); // Clear loading on exception
+        setState(() {
+          _errorMessage = 'حدث خطأ غير متوقع: ${e.toString()}';
+        });
+        // Auto-dismiss error after 3 seconds
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            setState(() {
+              _errorMessage = null;
+            });
+          }
+        });
+      }
     }
   }
 
@@ -179,7 +225,7 @@ class _SignupWithPaymentScreenState extends State<SignupWithPaymentScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  _selectedPlan!['name'],
+                                  _selectedPlan!['title'] ?? 'خطة غير محددة',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 18,
@@ -187,7 +233,7 @@ class _SignupWithPaymentScreenState extends State<SignupWithPaymentScreen> {
                                   ),
                                 ),
                                 Text(
-                                  '${_selectedPlan!['price']} ريال',
+                                  '\$${_selectedPlan!['price'] ?? '0.00'}',
                                   style: const TextStyle(
                                     color: Color(0xFF0A84FF),
                                     fontSize: 16,
@@ -249,22 +295,66 @@ class _SignupWithPaymentScreenState extends State<SignupWithPaymentScreen> {
 
                       const SizedBox(height: 20),
 
-                      // Email Field
-                      CustomTextField(
-                        controller: _emailController,
-                        hintText: 'البريد الإلكتروني',
-                        prefixIcon: const Icon(Icons.email_outlined,
-                            color: Color(0xFFB0B0B0)),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'البريد الإلكتروني مطلوب';
-                          }
-                          if (!value.contains('@')) {
-                            return 'البريد الإلكتروني غير صحيح';
-                          }
-                          return null;
-                        },
+                      // Email Field with helpful message
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Helpful message that appears when email field is focused
+                          if (_isEmailFocused)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0A84FF).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color:
+                                      const Color(0xFF0A84FF).withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    color: const Color(0xFF0A84FF),
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'الرجاء استخدام حساب جيميل مفعل',
+                                      style: TextStyle(
+                                        color: const Color(0xFF0A84FF),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          CustomTextField(
+                            controller: _emailController,
+                            focusNode: _emailFocusNode,
+                            hintText: 'البريد الإلكتروني',
+                            prefixIcon: const Icon(Icons.email_outlined,
+                                color: Color(0xFFB0B0B0)),
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'البريد الإلكتروني مطلوب';
+                              }
+                              if (!value.contains('@')) {
+                                return 'البريد الإلكتروني غير صحيح';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 20),
@@ -325,6 +415,41 @@ class _SignupWithPaymentScreenState extends State<SignupWithPaymentScreen> {
                       ),
 
                       const SizedBox(height: 40),
+
+                      // Error Message Display (above button)
+                      if (_errorMessage != null)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.red.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.red[400],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: TextStyle(
+                                    color: Colors.red[400],
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
                       // Signup Button
                       CustomButton(

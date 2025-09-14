@@ -40,7 +40,7 @@ class _ApiTestScreenState extends State<ApiTestScreen> {
             for (int i = 0; i < plans.length; i++) {
               final plan = plans[i] as Map<String, dynamic>;
               result +=
-                  'الخطة ${i + 1}: ${plan['name']} - ${plan['price']} ريال\n';
+                  'الخطة ${i + 1}: ${plan['title']} - \$${plan['price']}\n';
             }
           } else {
             result += 'تنسيق الاستجابة غير صحيح';

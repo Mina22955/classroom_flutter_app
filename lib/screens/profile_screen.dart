@@ -231,7 +231,7 @@ class ProfileScreen extends StatelessWidget {
                       {
                         'name': 'الخطة الشهرية',
                         'price': 29,
-                        'currency': 'ريال',
+                        'currency': '\$',
                         'duration': 'شهر',
                       };
 
@@ -268,7 +268,7 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          plan['name'].toString(),
+                          plan['title'].toString(),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -487,6 +487,85 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 20),
+              // Logout Button
+              Container(
+                width: double.infinity,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: Colors.red.withOpacity(0.3), width: 1),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () async {
+                      // Show confirmation dialog
+                      final shouldLogout = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          backgroundColor: const Color(0xFF1C1C1E),
+                          title: const Text(
+                            'تسجيل الخروج',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          content: const Text(
+                            'هل أنت متأكد من أنك تريد تسجيل الخروج؟',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text(
+                                'إلغاء',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text(
+                                'تسجيل الخروج',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (shouldLogout == true) {
+                        await authProvider.logout();
+                        if (context.mounted) {
+                          context.go('/login');
+                        }
+                      }
+                    },
+                    child: const Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.logout,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'تسجيل الخروج',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

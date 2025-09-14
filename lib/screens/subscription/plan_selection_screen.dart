@@ -117,25 +117,11 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
                       if (_plans.isNotEmpty)
                         ..._plans.map((plan) => Padding(
                               padding: const EdgeInsets.only(bottom: 20),
-                              child: GestureDetector(
+                              child: PlanCard(
+                                plan: plan,
+                                isSelected:
+                                    _selectedPlan?['_id'] == plan['_id'],
                                 onTap: () => _selectPlan(plan),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: _selectedPlan?['_id'] == plan['_id']
-                                        ? Border.all(
-                                            color: const Color(0xFF0A84FF),
-                                            width: 2,
-                                          )
-                                        : null,
-                                  ),
-                                  child: PlanCard(
-                                    plan: plan,
-                                    isSelected:
-                                        _selectedPlan?['_id'] == plan['_id'],
-                                    onTap: () => _selectPlan(plan),
-                                  ),
-                                ),
                               ),
                             ))
                       else if (!_isLoading)
@@ -202,7 +188,7 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _selectedPlan!['name'],
+                                _selectedPlan!['title'] ?? 'خطة غير محددة',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,
@@ -210,7 +196,7 @@ class _PlanSelectionScreenState extends State<PlanSelectionScreen> {
                                 ),
                               ),
                               Text(
-                                '${_selectedPlan!['price']} ريال',
+                                '\$${_selectedPlan!['price'] ?? '0.00'}',
                                 style: TextStyle(
                                   color: Colors.grey[400],
                                   fontSize: 16,

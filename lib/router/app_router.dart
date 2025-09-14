@@ -19,8 +19,12 @@ import '../screens/debug/api_test_screen.dart';
 class AppRouter {
   static final GoRouter router = GoRouter(
     initialLocation: '/login',
-    redirect: (context, state) {
+    redirect: (context, state) async {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      // Load stored login data on app startup
+      await authProvider.loadStoredLoginData();
+
       final isAuthenticated = authProvider.isAuthenticated;
       final isLoginRoute = state.uri.path == '/login';
       final isSignupRoute = state.uri.path == '/signup';

@@ -77,8 +77,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               elevation: 0,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                onPressed: () => context
-                    .go('/otp?email=${Uri.encodeComponent(widget.email)}'),
+                onPressed: () => context.go('/forget-password'),
               ),
               title: const Text('إعادة تعيين كلمة المرور'),
             ),

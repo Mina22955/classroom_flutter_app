@@ -31,12 +31,67 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('فشل في تسجيل الدخول: ${response.body}');
+      // Try to extract error message from response
+      try {
+        final errorData = jsonDecode(response.body);
+        print('API Service: Login error data: $errorData');
+
+        if (errorData is Map<String, dynamic>) {
+          String errorMessage = errorData['message'] ??
+              errorData['error'] ??
+              errorData['msg'] ??
+              'فشل في تسجيل الدخول';
+
+          print('API Service: Extracted login error message: $errorMessage');
+
+          // Clean up the error message if it contains JSON
+          if (errorMessage.contains('{') && errorMessage.contains('}')) {
+            try {
+              final nestedError = jsonDecode(errorMessage);
+              if (nestedError is Map<String, dynamic> &&
+                  nestedError.containsKey('message')) {
+                errorMessage = nestedError['message'];
+              }
+            } catch (e) {
+              errorMessage = 'بيانات تسجيل الدخول غير صحيحة';
+            }
+          }
+
+          // Translate common login error messages
+          if (errorMessage.toLowerCase().contains('invalid credentials') ||
+              errorMessage.toLowerCase().contains('wrong password') ||
+              errorMessage.toLowerCase().contains('incorrect password')) {
+            errorMessage = 'بيانات تسجيل الدخول غير صحيحة';
+          } else if (errorMessage.toLowerCase().contains('user not found') ||
+              errorMessage.toLowerCase().contains('email not found')) {
+            errorMessage = 'المستخدم غير موجود';
+          } else if (errorMessage.toLowerCase().contains('login error')) {
+            errorMessage = 'خطأ في تسجيل الدخول';
+          }
+
+          print('API Service: Final login error message: $errorMessage');
+          throw Exception(errorMessage);
+        } else {
+          throw Exception('فشل في تسجيل الدخول');
+        }
+      } catch (jsonError) {
+        print('API Service: Login JSON parsing error: $jsonError');
+        // If JSON parsing fails, provide user-friendly messages based on status code
+        if (response.statusCode == 401) {
+          throw Exception('بيانات تسجيل الدخول غير صحيحة');
+        } else if (response.statusCode == 404) {
+          throw Exception('المستخدم غير موجود');
+        } else if (response.statusCode == 500) {
+          throw Exception('خطأ في الخادم، يرجى المحاولة لاحقاً');
+        } else {
+          throw Exception('فشل في تسجيل الدخول');
+        }
+      }
     }
   }
 
   // Create pending user (new signup flow)
-  Future<Map<String, dynamic>?> createPendingUser({
+  Future<Map<String, dynamic>> createPendingUser({
     required String name,
     required String email,
     required String phone,
@@ -61,24 +116,146 @@ class ApiService {
 
       print('Response status code: ${response.statusCode}');
       print('Response body: ${response.body}');
+      print('Response headers: ${response.headers}');
 
       if (response.statusCode == 201) {
-        return jsonDecode(response.body); // contains pendingId
+        final responseData = jsonDecode(response.body);
+        print('Success response data: $responseData');
+
+        // Check if the response actually contains a pendingId
+        if (responseData['pendingId'] != null) {
+          print(
+              'API Service: Success - pendingId found: ${responseData['pendingId']}');
+          return responseData; // contains pendingId
+        } else {
+          // API returned 201 but no pendingId - this is an error
+          print('API Service: 201 response but no pendingId found');
+          print('API Service: Response keys: ${responseData.keys.toList()}');
+          print('API Service: Full response: $responseData');
+
+          String errorMessage = responseData['message'] ??
+              responseData['error'] ??
+              responseData['msg'] ??
+              responseData['errorMessage'] ??
+              responseData['details'] ??
+              'فشل في إنشاء الحساب المؤقت';
+
+          // Check for specific error patterns that indicate email already exists
+          String responseBody = response.body.toLowerCase();
+          if (responseBody.contains('email') &&
+              (responseBody.contains('already') ||
+                  responseBody.contains('exists') ||
+                  responseBody.contains('registered') ||
+                  responseBody.contains('duplicate'))) {
+            errorMessage = 'البريد الإلكتروني مسجل مسبقاً';
+            print(
+                'API Service: Detected email already exists error from response body');
+          } else if (errorMessage.toLowerCase().contains('email') &&
+              (errorMessage.toLowerCase().contains('already') ||
+                  errorMessage.toLowerCase().contains('exists') ||
+                  errorMessage.toLowerCase().contains('registered') ||
+                  errorMessage.toLowerCase().contains('duplicate'))) {
+            errorMessage = 'البريد الإلكتروني مسجل مسبقاً';
+            print(
+                'API Service: Detected email already exists in error message');
+          }
+
+          print(
+              'API Service: 201 response but no pendingId, final error: $errorMessage');
+          throw Exception(errorMessage);
+        }
       } else {
         print(
             'Error creating pending user: ${response.statusCode} - ${response.body}');
-        return null;
+
+        // Try to extract error message from response
+        try {
+          final errorData = jsonDecode(response.body);
+          print('API Service: Parsed error data: $errorData');
+
+          if (errorData is Map<String, dynamic>) {
+            // Check for different possible error message fields
+            String errorMessage = errorData['message'] ??
+                errorData['error'] ??
+                errorData['msg'] ??
+                'فشل في إنشاء الحساب المؤقت';
+
+            print('API Service: Extracted error message: $errorMessage');
+
+            // Clean up the error message if it contains JSON
+            if (errorMessage.contains('{') && errorMessage.contains('}')) {
+              try {
+                final nestedError = jsonDecode(errorMessage);
+                if (nestedError is Map<String, dynamic> &&
+                    nestedError.containsKey('message')) {
+                  errorMessage = nestedError['message'];
+                }
+              } catch (e) {
+                // If nested JSON parsing fails, use a generic message
+                errorMessage = 'البريد الإلكتروني مسجل مسبقاً';
+              }
+            }
+
+            // Translate common English error messages to Arabic
+            if (errorMessage
+                .toLowerCase()
+                .contains('error fetching pending payment')) {
+              errorMessage = 'خطأ في جلب بيانات الدفع المؤقت';
+            } else if (errorMessage.toLowerCase().contains('email already') ||
+                errorMessage.toLowerCase().contains('email exists') ||
+                errorMessage.toLowerCase().contains('email registered') ||
+                errorMessage.toLowerCase().contains('duplicate email')) {
+              errorMessage = 'البريد الإلكتروني مسجل مسبقاً';
+            } else if (errorMessage.toLowerCase().contains('server error')) {
+              errorMessage = 'خطأ في الخادم، يرجى المحاولة لاحقاً';
+            }
+
+            // Also check the raw response body for email-related errors
+            String responseBody = response.body.toLowerCase();
+            if (responseBody.contains('email') &&
+                (responseBody.contains('already') ||
+                    responseBody.contains('exists') ||
+                    responseBody.contains('registered') ||
+                    responseBody.contains('duplicate'))) {
+              errorMessage = 'البريد الإلكتروني مسجل مسبقاً';
+              print(
+                  'API Service: Detected email already exists error from raw response body');
+            }
+
+            print('API Service: Final error message: $errorMessage');
+            throw Exception(errorMessage);
+          } else {
+            throw Exception('فشل في إنشاء الحساب المؤقت');
+          }
+        } catch (jsonError) {
+          print('API Service: JSON parsing error: $jsonError');
+          // If JSON parsing fails, check response body for email errors
+          String responseBody = response.body.toLowerCase();
+          if (responseBody.contains('email') &&
+              (responseBody.contains('already') ||
+                  responseBody.contains('exists') ||
+                  responseBody.contains('registered') ||
+                  responseBody.contains('duplicate'))) {
+            throw Exception('البريد الإلكتروني مسجل مسبقاً');
+          } else if (response.statusCode == 400) {
+            throw Exception('البريد الإلكتروني مسجل مسبقاً');
+          } else if (response.statusCode == 500) {
+            throw Exception('خطأ في الخادم، يرجى المحاولة لاحقاً');
+          } else {
+            throw Exception('فشل في إنشاء الحساب المؤقت');
+          }
+        }
       }
     } catch (e) {
       print('Exception creating pending user: $e');
-      return null;
+      rethrow; // Re-throw to let AuthProvider handle the error message
     }
   }
 
   // Get available plans
   Future<List<dynamic>> getPlans() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/api/plans/'));
+      final response = await http.get(Uri.parse('$baseUrl/api/plans'));
       print('Plans API Response Status: ${response.statusCode}');
       print('Plans API Response Body: ${response.body}');
 
@@ -124,11 +301,24 @@ class ApiService {
       } else {
         print(
             'Error creating checkout session: ${response.statusCode} - ${response.body}');
-        return null;
+
+        // Try to extract error message from response
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData is Map<String, dynamic> &&
+              errorData.containsKey('message')) {
+            throw Exception(errorData['message']);
+          } else {
+            throw Exception('فشل في إنشاء جلسة الدفع');
+          }
+        } catch (jsonError) {
+          // If JSON parsing fails, throw with response body
+          throw Exception('فشل في إنشاء جلسة الدفع: ${response.body}');
+        }
       }
     } catch (e) {
       print('Exception creating checkout session: $e');
-      return null;
+      rethrow; // Re-throw to let AuthProvider handle the error message
     }
   }
 
@@ -149,20 +339,70 @@ class ApiService {
   Future<Map<String, dynamic>> requestPasswordReset({
     required String email,
   }) async {
-    await _mockDelay();
+    try {
+      print('Requesting password reset for email: $email');
+      print('API URL: $baseUrl/api/auth/forgot-password');
 
-    if (email.isEmpty || !email.contains('@')) {
-      throw Exception('البريد الإلكتروني غير صحيح');
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      print('Password reset response status: ${response.statusCode}');
+      print('Password reset response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': responseData['message'] ??
+              'تم إرسال رمز التحقق إلى بريدك الإلكتروني',
+        };
+      } else {
+        print(
+            'Error requesting password reset: ${response.statusCode} - ${response.body}');
+
+        // Try to extract error message from response
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData is Map<String, dynamic>) {
+            String errorMessage = errorData['message'] ??
+                errorData['error'] ??
+                'فشل في إرسال رمز التحقق';
+
+            // Handle specific error cases
+            if (response.statusCode == 500) {
+              errorMessage = 'خطأ في الخادم، يرجى المحاولة لاحقاً';
+            } else if (response.statusCode == 404) {
+              errorMessage = 'البريد الإلكتروني غير مسجل';
+            } else if (response.statusCode == 400) {
+              errorMessage = 'البريد الإلكتروني غير صحيح';
+            }
+
+            print('API Service: Password reset error message: $errorMessage');
+            throw Exception(errorMessage);
+          } else {
+            throw Exception('فشل في إرسال رمز التحقق');
+          }
+        } catch (jsonError) {
+          print('API Service: Password reset JSON parsing error: $jsonError');
+          // If JSON parsing fails, provide user-friendly messages based on status code
+          if (response.statusCode == 500) {
+            throw Exception('خطأ في الخادم، يرجى المحاولة لاحقاً');
+          } else if (response.statusCode == 404) {
+            throw Exception('البريد الإلكتروني غير مسجل');
+          } else if (response.statusCode == 400) {
+            throw Exception('البريد الإلكتروني غير صحيح');
+          } else {
+            throw Exception('فشل في إرسال رمز التحقق');
+          }
+        }
+      }
+    } catch (e) {
+      print('Exception requesting password reset: $e');
+      rethrow; // Re-throw to let AuthProvider handle the error message
     }
-
-    // Mock OTP generation
-    const otp = '123456';
-
-    return {
-      'success': true,
-      'message': 'تم إرسال رمز التحقق إلى بريدك الإلكتروني',
-      'otp': otp, // In real app, this would be sent via email
-    };
   }
 
   Future<Map<String, dynamic>> verifyOtp({
