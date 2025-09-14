@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_web/webview_flutter_web.dart';
 import 'providers/auth_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'router/app_router.dart';
 
 void main() {
-  // Initialize WebView platform for web
-  WebViewPlatform.instance = WebWebViewPlatform();
   runApp(const MyApp());
 }
 
